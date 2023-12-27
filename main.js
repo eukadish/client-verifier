@@ -25,12 +25,29 @@ const content = `
 
 const $ = cheerio.load(content);
 
+function strip(test) {
+    return _.trim(_.replace(_.replace(_.replace(target, /(\r\n|\n|\r)/g, ''), ';', '; '), /\s+/g, ' '));
+}
+
+async function digest(encoded) {
+    const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+    const hashHex = hashArray
+        .map((b) => b.toString(16).padStart(2, '0'))
+        .join('');
+
+    return hashHex;
+}
+
 const target = $('script:eq(0)').text();
-const stripped = _.replace(_.replace(target, /(\r\n|\n|\r)/g, ''), /\s+/g, ' ');
+// const stripped = _.replace(_.replace(target, /(\r\n|\n|\r)/g, ''), /\s+/g, ' ');
+// const stripped = _.replace(_.replace(_.replace(target, /(\r\n|\n|\r)/g, ''), ';', '; '), /\s+/g, ' ');
 
-console.log(_.trim(stripped));
+// console.log(_.trim(stripped));
 
-const encoded = (new TextEncoder()).encode(stripped);
+// const encoded = (new TextEncoder()).encode(stripped);
 
 const reference = `
 const name = 'Fred';
@@ -40,7 +57,7 @@ console.log(name);
 
 // TODO: replace the semicolons first
 
-console.log(_.trim(_.replace(_.replace(_.replace(reference, /(\r\n|\n|\r)/g, ''), /\s+/g, ' '), ';', '; ')));
+// console.log(_.trim(_.replace(_.replace(_.replace(reference, /(\r\n|\n|\r)/g, ''), /\s+/g, ' '), ';', '; ')));
 
 // TODO: replace semicolon with space semicolon
 
@@ -50,16 +67,18 @@ console.log(_.trim(_.replace(_.replace(_.replace(reference, /(\r\n|\n|\r)/g, '')
 
 // crypto.subtle.digest("SHA-256", encoded).then((hash) => console.log(hash.toString('hex')) );
 
-async function verify(e) {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', e);
+const strippedTarget = strip(target);
+const strippedReference = strip(reference);
 
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
+console.log(strippedTarget);
+console.log(strippedReference);
 
-    const hashHex = hashArray
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
+Promise.all([
+    digest((new TextEncoder()).encode(strippedTarget)),
+    digest((new TextEncoder()).encode(strippedReference))
+]).then((res) => {
+    console.log(res[0]);
+    console.log(res[1]);
+})
 
-    console.log(hashHex);
-}
-
-verify(encoded);
+// verify(encoded);
